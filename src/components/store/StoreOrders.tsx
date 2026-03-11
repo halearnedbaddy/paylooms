@@ -138,7 +138,7 @@ const OrderRow = memo(function OrderRow({
   );
 });
 
-
+export function StoreOrders() {
   const { toast } = useToast();
   const { formatPrice } = useCurrency();
   const [loading, setLoading] = useState(true);
