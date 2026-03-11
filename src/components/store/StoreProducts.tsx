@@ -610,112 +610,62 @@ export function StoreProducts({ storeSlug, bulkMode: bulkModeProp }: StoreProduc
           </div>
         </div>
       ) : (
+        <>
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {filteredProducts.map((product) => {
-            const paymentLink = getPaymentLink(product);
-            const isDeleting = deletingId === product.id;
-            const isCopied = copiedId === product.id;
-            const isSelected = selectedIds.has(product.id);
-
-            return (
-              <div
+          {(() => {
+            const totalPages = Math.ceil(filteredProducts.length / ITEMS_PER_PAGE);
+            const paginatedProducts = filteredProducts.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE);
+            return paginatedProducts.map((product) => (
+              <ProductCard
                 key={product.id}
-                className={`bg-card border rounded-xl overflow-hidden hover:shadow-lg transition-all duration-300 group relative ${isSelected ? 'ring-2 ring-primary' : 'border-border'}`}
-              >
-                {/* Product Image */}
-                <div className="relative aspect-square bg-muted">
-                  {bulkMode && (
-                    <div className="absolute top-3 left-3 z-10">
-                      <input type="checkbox" checked={isSelected} onChange={() => toggleSelect(product.id)} className="rounded bg-card w-5 h-5 cursor-pointer" onClick={e => e.stopPropagation()} />
-                    </div>
-                  )}
-                  {product.images?.[0] ? (
-                    <img src={product.images[0]} alt={product.name} className="w-full h-full object-cover" />
-                  ) : (
-                    <div className="w-full h-full flex items-center justify-center">
-                      <ImageIcon size={48} className="text-muted-foreground/30" />
-                    </div>
-                  )}
-
-                  {/* Status Badge */}
-                  <div className={`absolute top-3 left-3 px-2 py-1 rounded-full text-xs font-medium ${
-                    product.status === 'PUBLISHED'
-                      ? 'bg-green-100 text-green-800'
-                      : product.status === 'DRAFT'
-                        ? 'bg-amber-100 text-amber-800'
-                        : 'bg-muted text-muted-foreground'
-                  }`}>
-                    {product.status}
-                  </div>
-
-                  {/* Source Platform */}
-                  {product.sourcePlatform && (
-                    <div className="absolute top-3 right-3 px-2 py-1 bg-card/90 rounded-full flex items-center gap-1">
-                      {getPlatformIcon(product.sourcePlatform)}
-                    </div>
-                  )}
-
-                  {/* Actions Overlay */}
-                  <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
-                    <button onClick={() => startEdit(product)} className="p-2 bg-card rounded-full hover:bg-muted transition" title="Edit">
-                      <EditIcon size={18} className="text-foreground" />
-                    </button>
-                    {product.status === 'DRAFT' && (
-                      <button onClick={() => handlePublish(product)} className="p-2 bg-green-500 rounded-full hover:bg-green-600 transition" title="Publish">
-                        <CheckIcon size={18} className="text-white" />
-                      </button>
-                    )}
-                    {product.status === 'PUBLISHED' && (
-                      <button onClick={() => handleArchive(product)} className="p-2 bg-amber-500 rounded-full hover:bg-amber-600 transition" title="Archive">
-                        <ArchiveIcon size={18} className="text-white" />
-                      </button>
-                    )}
-                    <button onClick={() => handleDelete(product)} disabled={isDeleting} className="p-2 bg-destructive rounded-full hover:bg-destructive/90 transition disabled:opacity-50" title="Delete">
-                      {isDeleting ? <LoaderIcon size={18} className="text-white animate-spin" /> : <TrashIcon size={18} className="text-white" />}
-                    </button>
-                    <button onClick={() => handleDuplicate(product)} disabled={duplicatingId === product.id} className="p-2 bg-card rounded-full hover:bg-muted transition" title="Duplicate">
-                      {duplicatingId === product.id ? <Loader2 size={18} className="animate-spin text-foreground" /> : <Copy size={18} className="text-foreground" />}
-                    </button>
-                    {product.sourceUrl && (
-                      <a href={product.sourceUrl} target="_blank" rel="noopener noreferrer" className="p-2 bg-card rounded-full hover:bg-muted transition" title="View Source">
-                        <ExternalLinkIcon size={18} className="text-foreground" />
-                      </a>
-                    )}
-                  </div>
-                </div>
-
-                {/* Product Info */}
-                <div className="p-4">
-                  <h3 className="font-semibold text-foreground mb-1 truncate">{product.name}</h3>
-                  {product.description && (
-                    <p className="text-sm text-muted-foreground mb-2 line-clamp-2">{product.description}</p>
-                  )}
-                  <p className="text-lg font-bold text-primary mb-3">{formatCurrency(product.price)}</p>
-
-                  {/* Payment Link Section */}
-                  {paymentLink ? (
-                    <div className="flex items-center gap-2 p-2 bg-muted/50 rounded-lg">
-                      <LinkIcon size={14} className="text-muted-foreground flex-shrink-0" />
-                      <span className="text-xs text-muted-foreground truncate flex-1">{paymentLink}</span>
-                      <button onClick={() => copyPaymentLink(product)} className="p-1 hover:bg-muted rounded transition flex-shrink-0" title="Copy link">
-                        {isCopied ? <CheckCircleIcon size={14} className="text-green-500" /> : <CopyIcon size={14} className="text-muted-foreground" />}
-                      </button>
-                    </div>
-                  ) : product.status === 'DRAFT' ? (
-                    <button
-                      onClick={() => handlePublish(product)}
-                      disabled={publishing === product.id}
-                      className="w-full text-sm px-3 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition font-medium flex items-center justify-center gap-2 disabled:opacity-70"
-                    >
-                      {publishing === product.id ? <LoaderIcon size={14} className="animate-spin" /> : <CheckIcon size={14} />}
-                      {publishing === product.id ? 'Publishing...' : 'Publish to Get Link'}
-                    </button>
-                  ) : null}
-                </div>
-              </div>
-            );
-          })}
+                product={product}
+                paymentLink={getPaymentLink(product)}
+                isDeleting={deletingId === product.id}
+                isCopied={copiedId === product.id}
+                isSelected={selectedIds.has(product.id)}
+                bulkMode={bulkMode}
+                publishing={publishing}
+                duplicatingId={duplicatingId}
+                onEdit={startEdit}
+                onPublish={handlePublish}
+                onArchive={handleArchive}
+                onDelete={handleDelete}
+                onDuplicate={handleDuplicate}
+                onToggleSelect={toggleSelect}
+                onCopyLink={copyPaymentLink}
+                formatCurrency={formatCurrency}
+                getPlatformIcon={getPlatformIcon}
+              />
+            ));
+          })()}
         </div>
+
+        {/* Pagination */}
+        {Math.ceil(filteredProducts.length / ITEMS_PER_PAGE) > 1 && (
+          <div className="flex items-center justify-between pt-4">
+            <p className="text-sm text-muted-foreground">
+              Showing {(currentPage - 1) * ITEMS_PER_PAGE + 1}–{Math.min(currentPage * ITEMS_PER_PAGE, filteredProducts.length)} of {filteredProducts.length}
+            </p>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                disabled={currentPage === 1}
+                className="p-2 rounded-lg border border-input hover:bg-muted disabled:opacity-50 transition"
+              >
+                <ChevronLeft size={16} />
+              </button>
+              <span className="text-sm font-medium px-2">Page {currentPage} of {Math.ceil(filteredProducts.length / ITEMS_PER_PAGE)}</span>
+              <button
+                onClick={() => setCurrentPage(p => Math.min(Math.ceil(filteredProducts.length / ITEMS_PER_PAGE), p + 1))}
+                disabled={currentPage === Math.ceil(filteredProducts.length / ITEMS_PER_PAGE)}
+                className="p-2 rounded-lg border border-input hover:bg-muted disabled:opacity-50 transition"
+              >
+                <ChevronRight size={16} />
+              </button>
+            </div>
+          </div>
+        )}
+        </>
       )}
 
       {/* Add Product Modal */}
