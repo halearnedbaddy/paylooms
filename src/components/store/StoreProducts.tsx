@@ -143,6 +143,9 @@ export function StoreProducts({ storeSlug, bulkMode: bulkModeProp }: StoreProduc
   const [drafts, setDrafts] = useState<Product[]>([]);
   const [filter, setFilter] = useState<'all' | 'published' | 'drafts'>('all');
   const [searchQuery, setSearchQuery] = useState('');
+
+  // Reset page when filter/search changes
+  useEffect(() => { setCurrentPage(1); }, [filter, searchQuery]);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [editForm, setEditForm] = useState({ name: '', description: '', price: '', imageUrl: '', sku: '', compareAtPrice: '', cost: '', categoryId: '', quantity: '' });
   const [saving, setSaving] = useState(false);
