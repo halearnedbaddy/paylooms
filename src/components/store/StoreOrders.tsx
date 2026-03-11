@@ -328,7 +328,9 @@ export function StoreOrders() {
       minute: '2-digit',
     });
 
-  const filteredOrders = getFilteredOrders();
+  const allFilteredOrders = getFilteredOrders();
+  const totalPages = Math.ceil(allFilteredOrders.length / ITEMS_PER_PAGE);
+  const filteredOrders = allFilteredOrders.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE);
   const statusCounts = {
     all: orders.length,
     pending: orders.filter((o) =>
