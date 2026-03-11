@@ -80,10 +80,13 @@ export function StoreOrders() {
   // Keep a ref to existing order IDs so realtime can detect genuinely new ones
   const knownOrderIds = useRef<Set<string>>(new Set());
 
+  const [currentPage, setCurrentPage] = useState(1);
+  const ITEMS_PER_PAGE = 20;
+
   const loadOrders = async () => {
     setLoading(true);
     try {
-      const res = await getSellerOrders({ limit: 100 });
+      const res = await getSellerOrders({ limit: 200 });
       if (res.success && res.data) {
         const ordersData = Array.isArray(res.data)
           ? res.data
