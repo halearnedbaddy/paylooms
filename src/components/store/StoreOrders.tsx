@@ -132,11 +132,12 @@ export function StoreOrders() {
             event: 'INSERT',
             schema: 'public',
             table: 'transactions',
-            filter: `seller_id=eq.${sellerId}`,
           },
           (payload: any) => {
             const record = payload.new;
             if (!record) return;
+            // Only handle orders for this seller
+            if (record.seller_id !== sellerId) return;
 
             const isNew = !knownOrderIds.current.has(record.id);
             if (isNew) {
@@ -176,11 +177,12 @@ export function StoreOrders() {
             event: 'UPDATE',
             schema: 'public',
             table: 'transactions',
-            filter: `seller_id=eq.${sellerId}`,
           },
           (payload: any) => {
             const record = payload.new;
             if (!record) return;
+            // Only handle orders for this seller
+            if (record.seller_id !== sellerId) return;
             setOrders((prev) =>
               prev.map((o) =>
                 o.id === record.id
