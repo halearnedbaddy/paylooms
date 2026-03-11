@@ -56,6 +56,8 @@ export function StoreProducts({ storeSlug, bulkMode: bulkModeProp }: StoreProduc
   const [exporting, setExporting] = useState(false);
   const [loading, setLoading] = useState(true);
   const [products, setProducts] = useState<Product[]>([]);
+  const [currentPage, setCurrentPage] = useState(1);
+  const ITEMS_PER_PAGE = 20;
   const [drafts, setDrafts] = useState<Product[]>([]);
   const [filter, setFilter] = useState<'all' | 'published' | 'drafts'>('all');
   const [searchQuery, setSearchQuery] = useState('');
