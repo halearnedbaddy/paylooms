@@ -59,8 +59,86 @@ async function sendOrderAcceptedSMS(transactionId: string, toast: any) {
     toast({ title: '⚠️ SMS failed', description: 'Order accepted, but SMS notification could not be sent.', variant: 'destructive' });
   }
 }
+// Memoized Order Row component to prevent unnecessary re-renders
+interface OrderRowProps {
+  order: Order;
+  isExpanded: boolean;
+  actionLoading: string | null;
+  onToggleExpand: (id: string) => void;
+  onAccept: (id: string) => void;
+  onReject: (id: string) => void;
+  onShip: (order: Order) => void;
+  formatCurrency: (amount: number, currency?: string) => string;
+  formatDate: (dateStr: string) => string;
+}
 
-export function StoreOrders() {
+const OrderRow = memo(function OrderRow({
+  order, isExpanded, actionLoading, onToggleExpand, onAccept, onReject, onShip, formatCurrency, formatDate,
+}: OrderRowProps) {
+  const statusConfig = STATUS_CONFIG[order.status] || { label: order.status, color: 'text-gray-700', bgColor: 'bg-gray-100' };
+  const needsAction = ['PAID', 'paid', 'PENDING', 'pending'].includes(order.status);
+  const canShip = ['ACCEPTED', 'accepted'].includes(order.status);
+
+  return (
+    <div className={`bg-card border rounded-xl transition-all ${needsAction ? 'border-amber-300 shadow-sm shadow-amber-100' : 'border-border'}`}>
+      <div className="p-4 cursor-pointer flex items-center gap-4" onClick={() => onToggleExpand(order.id)}>
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2 mb-1">
+            <span className="font-mono text-sm text-muted-foreground">#{order.id.slice(0, 8)}</span>
+            <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${statusConfig.bgColor} ${statusConfig.color}`}>{statusConfig.label}</span>
+            {needsAction && <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-800 animate-pulse">Action Required</span>}
+          </div>
+          <p className="font-semibold text-foreground truncate">{order.itemName}</p>
+          <p className="text-sm text-muted-foreground">{order.buyerName}</p>
+        </div>
+        <div className="text-right">
+          <p className="text-lg font-bold text-foreground">{formatCurrency(order.amount)}</p>
+          <p className="text-xs text-muted-foreground">{formatDate(order.createdAt)}</p>
+        </div>
+        <ChevronDown className={`text-muted-foreground transition-transform ${isExpanded ? 'rotate-180' : ''}`} size={20} />
+      </div>
+      {isExpanded && (
+        <div className="border-t border-border p-4 space-y-4">
+          <div className="grid sm:grid-cols-2 gap-4">
+            <div>
+              <p className="text-sm font-medium text-muted-foreground mb-1">Buyer Details</p>
+              <p className="font-semibold text-foreground">{order.buyerName}</p>
+              {order.buyerPhone && <p className="text-sm text-foreground">{order.buyerPhone}</p>}
+              {order.buyerEmail && <p className="text-sm text-foreground">{order.buyerEmail}</p>}
+            </div>
+            {order.shippingInfo && (
+              <div>
+                <p className="text-sm font-medium text-muted-foreground mb-1">Shipping Info</p>
+                <p className="font-semibold text-foreground">{order.shippingInfo.courierName}</p>
+                <p className="text-sm text-foreground">Tracking: {order.shippingInfo.trackingNumber}</p>
+                {order.shippingInfo.estimatedDelivery && <p className="text-sm text-muted-foreground">Est. delivery: {order.shippingInfo.estimatedDelivery}</p>}
+              </div>
+            )}
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {needsAction && (
+              <>
+                <button onClick={() => onAccept(order.id)} disabled={actionLoading === order.id} className="inline-flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition font-medium disabled:opacity-50">
+                  {actionLoading === order.id ? <Loader2 size={16} className="animate-spin" /> : <Check size={16} />} Accept Order
+                </button>
+                <button onClick={() => onReject(order.id)} disabled={actionLoading === order.id} className="inline-flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition font-medium disabled:opacity-50">
+                  <X size={16} /> Reject
+                </button>
+              </>
+            )}
+            {canShip && (
+              <button onClick={() => onShip(order)} className="inline-flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition font-medium">
+                <Truck size={16} /> Add Shipping Info
+              </button>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+});
+
+
   const { toast } = useToast();
   const { formatPrice } = useCurrency();
   const [loading, setLoading] = useState(true);
