@@ -1,5 +1,5 @@
-import { useState, useEffect, useRef } from 'react';
-import { ShoppingCart, Search, Clock, Check, X, Truck, Loader2, ChevronDown, Bell } from 'lucide-react';
+import { useState, useEffect, useRef, memo, useCallback, useMemo } from 'react';
+import { ShoppingCart, Search, Clock, Check, X, Truck, Loader2, ChevronDown, Bell, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useCurrency } from '@/hooks/useCurrency';
 import { supabase } from '@/integrations/supabase/client';
