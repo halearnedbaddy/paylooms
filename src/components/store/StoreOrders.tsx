@@ -147,6 +147,9 @@ export function StoreOrders() {
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [expandedOrder, setExpandedOrder] = useState<string | null>(null);
+
+  // Reset page when filter/search changes
+  useEffect(() => { setCurrentPage(1); }, [statusFilter, searchQuery]);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [shippingModal, setShippingModal] = useState<Order | null>(null);
   const [shippingForm, setShippingForm] = useState({
