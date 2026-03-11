@@ -1,5 +1,5 @@
-import { useState, useEffect, useRef } from 'react';
-import { ShoppingCart, Search, Clock, Check, X, Truck, Loader2, ChevronDown, Bell } from 'lucide-react';
+import { useState, useEffect, useRef, memo } from 'react';
+import { ShoppingCart, Search, Clock, Check, X, Truck, Loader2, ChevronDown, Bell, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useCurrency } from '@/hooks/useCurrency';
 import { supabase } from '@/integrations/supabase/client';
@@ -59,6 +59,84 @@ async function sendOrderAcceptedSMS(transactionId: string, toast: any) {
     toast({ title: '⚠️ SMS failed', description: 'Order accepted, but SMS notification could not be sent.', variant: 'destructive' });
   }
 }
+// Memoized Order Row component to prevent unnecessary re-renders
+interface OrderRowProps {
+  order: Order;
+  isExpanded: boolean;
+  actionLoading: string | null;
+  onToggleExpand: (id: string) => void;
+  onAccept: (id: string) => void;
+  onReject: (id: string) => void;
+  onShip: (order: Order) => void;
+  formatCurrency: (amount: number, currency?: string) => string;
+  formatDate: (dateStr: string) => string;
+}
+
+const OrderRow = memo(function OrderRow({
+  order, isExpanded, actionLoading, onToggleExpand, onAccept, onReject, onShip, formatCurrency, formatDate,
+}: OrderRowProps) {
+  const statusConfig = STATUS_CONFIG[order.status] || { label: order.status, color: 'text-gray-700', bgColor: 'bg-gray-100' };
+  const needsAction = ['PAID', 'paid', 'PENDING', 'pending'].includes(order.status);
+  const canShip = ['ACCEPTED', 'accepted'].includes(order.status);
+
+  return (
+    <div className={`bg-card border rounded-xl transition-all ${needsAction ? 'border-amber-300 shadow-sm shadow-amber-100' : 'border-border'}`}>
+      <div className="p-4 cursor-pointer flex items-center gap-4" onClick={() => onToggleExpand(order.id)}>
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2 mb-1">
+            <span className="font-mono text-sm text-muted-foreground">#{order.id.slice(0, 8)}</span>
+            <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${statusConfig.bgColor} ${statusConfig.color}`}>{statusConfig.label}</span>
+            {needsAction && <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-800 animate-pulse">Action Required</span>}
+          </div>
+          <p className="font-semibold text-foreground truncate">{order.itemName}</p>
+          <p className="text-sm text-muted-foreground">{order.buyerName}</p>
+        </div>
+        <div className="text-right">
+          <p className="text-lg font-bold text-foreground">{formatCurrency(order.amount)}</p>
+          <p className="text-xs text-muted-foreground">{formatDate(order.createdAt)}</p>
+        </div>
+        <ChevronDown className={`text-muted-foreground transition-transform ${isExpanded ? 'rotate-180' : ''}`} size={20} />
+      </div>
+      {isExpanded && (
+        <div className="border-t border-border p-4 space-y-4">
+          <div className="grid sm:grid-cols-2 gap-4">
+            <div>
+              <p className="text-sm font-medium text-muted-foreground mb-1">Buyer Details</p>
+              <p className="font-semibold text-foreground">{order.buyerName}</p>
+              {order.buyerPhone && <p className="text-sm text-foreground">{order.buyerPhone}</p>}
+              {order.buyerEmail && <p className="text-sm text-foreground">{order.buyerEmail}</p>}
+            </div>
+            {order.shippingInfo && (
+              <div>
+                <p className="text-sm font-medium text-muted-foreground mb-1">Shipping Info</p>
+                <p className="font-semibold text-foreground">{order.shippingInfo.courierName}</p>
+                <p className="text-sm text-foreground">Tracking: {order.shippingInfo.trackingNumber}</p>
+                {order.shippingInfo.estimatedDelivery && <p className="text-sm text-muted-foreground">Est. delivery: {order.shippingInfo.estimatedDelivery}</p>}
+              </div>
+            )}
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {needsAction && (
+              <>
+                <button onClick={() => onAccept(order.id)} disabled={actionLoading === order.id} className="inline-flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition font-medium disabled:opacity-50">
+                  {actionLoading === order.id ? <Loader2 size={16} className="animate-spin" /> : <Check size={16} />} Accept Order
+                </button>
+                <button onClick={() => onReject(order.id)} disabled={actionLoading === order.id} className="inline-flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition font-medium disabled:opacity-50">
+                  <X size={16} /> Reject
+                </button>
+              </>
+            )}
+            {canShip && (
+              <button onClick={() => onShip(order)} className="inline-flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition font-medium">
+                <Truck size={16} /> Add Shipping Info
+              </button>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+});
 
 export function StoreOrders() {
   const { toast } = useToast();
@@ -69,6 +147,9 @@ export function StoreOrders() {
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [expandedOrder, setExpandedOrder] = useState<string | null>(null);
+
+  // Reset page when filter/search changes
+  useEffect(() => { setCurrentPage(1); }, [statusFilter, searchQuery]);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [shippingModal, setShippingModal] = useState<Order | null>(null);
   const [shippingForm, setShippingForm] = useState({
@@ -80,10 +161,13 @@ export function StoreOrders() {
   // Keep a ref to existing order IDs so realtime can detect genuinely new ones
   const knownOrderIds = useRef<Set<string>>(new Set());
 
+  const [currentPage, setCurrentPage] = useState(1);
+  const ITEMS_PER_PAGE = 20;
+
   const loadOrders = async () => {
     setLoading(true);
     try {
-      const res = await getSellerOrders({ limit: 100 });
+      const res = await getSellerOrders({ limit: 200 });
       if (res.success && res.data) {
         const ordersData = Array.isArray(res.data)
           ? res.data
@@ -325,7 +409,9 @@ export function StoreOrders() {
       minute: '2-digit',
     });
 
-  const filteredOrders = getFilteredOrders();
+  const allFilteredOrders = getFilteredOrders();
+  const totalPages = Math.ceil(allFilteredOrders.length / ITEMS_PER_PAGE);
+  const filteredOrders = allFilteredOrders.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE);
   const statusCounts = {
     all: orders.length,
     pending: orders.filter((o) =>
@@ -432,139 +518,50 @@ export function StoreOrders() {
           )}
         </div>
       ) : (
+        <>
         <div className="space-y-3">
-          {filteredOrders.map((order) => {
-            const statusConfig = STATUS_CONFIG[order.status] || {
-              label: order.status,
-              color: 'text-gray-700',
-              bgColor: 'bg-gray-100',
-            };
-            const isExpanded = expandedOrder === order.id;
-            const needsAction = ['PAID', 'paid', 'PENDING', 'pending'].includes(order.status);
-            const canShip = ['ACCEPTED', 'accepted'].includes(order.status);
-
-            return (
-              <div
-                key={order.id}
-                className={`bg-card border rounded-xl transition-all ${
-                  needsAction ? 'border-amber-300 shadow-sm shadow-amber-100' : 'border-border'
-                }`}
-              >
-                {/* Order Header */}
-                <div
-                  className="p-4 cursor-pointer flex items-center gap-4"
-                  onClick={() => setExpandedOrder(isExpanded ? null : order.id)}
-                >
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-1">
-                      <span className="font-mono text-sm text-muted-foreground">
-                        #{order.id.slice(0, 8)}
-                      </span>
-                      <span
-                        className={`px-2 py-0.5 rounded-full text-xs font-medium ${statusConfig.bgColor} ${statusConfig.color}`}
-                      >
-                        {statusConfig.label}
-                      </span>
-                      {needsAction && (
-                        <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-800 animate-pulse">
-                          Action Required
-                        </span>
-                      )}
-                    </div>
-                    <p className="font-semibold text-foreground truncate">{order.itemName}</p>
-                    <p className="text-sm text-muted-foreground">{order.buyerName}</p>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-lg font-bold text-foreground">
-                      {formatCurrency(order.amount)}
-                    </p>
-                    <p className="text-xs text-muted-foreground">{formatDate(order.createdAt)}</p>
-                  </div>
-                  <ChevronDown
-                    className={`text-muted-foreground transition-transform ${isExpanded ? 'rotate-180' : ''}`}
-                    size={20}
-                  />
-                </div>
-
-                {/* Expanded Details */}
-                {isExpanded && (
-                  <div className="border-t border-border p-4 space-y-4">
-                    {/* Buyer Info */}
-                    <div className="grid sm:grid-cols-2 gap-4">
-                      <div>
-                        <p className="text-sm font-medium text-muted-foreground mb-1">
-                          Buyer Details
-                        </p>
-                        <p className="font-semibold text-foreground">{order.buyerName}</p>
-                        {order.buyerPhone && (
-                          <p className="text-sm text-foreground">{order.buyerPhone}</p>
-                        )}
-                        {order.buyerEmail && (
-                          <p className="text-sm text-foreground">{order.buyerEmail}</p>
-                        )}
-                      </div>
-                      {order.shippingInfo && (
-                        <div>
-                          <p className="text-sm font-medium text-muted-foreground mb-1">
-                            Shipping Info
-                          </p>
-                          <p className="font-semibold text-foreground">
-                            {order.shippingInfo.courierName}
-                          </p>
-                          <p className="text-sm text-foreground">
-                            Tracking: {order.shippingInfo.trackingNumber}
-                          </p>
-                          {order.shippingInfo.estimatedDelivery && (
-                            <p className="text-sm text-muted-foreground">
-                              Est. delivery: {order.shippingInfo.estimatedDelivery}
-                            </p>
-                          )}
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Actions */}
-                    <div className="flex flex-wrap gap-2">
-                      {needsAction && (
-                        <>
-                          <button
-                            onClick={() => handleAccept(order.id)}
-                            disabled={actionLoading === order.id}
-                            className="inline-flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition font-medium disabled:opacity-50"
-                          >
-                            {actionLoading === order.id ? (
-                              <Loader2 size={16} className="animate-spin" />
-                            ) : (
-                              <Check size={16} />
-                            )}
-                            Accept Order
-                          </button>
-                          <button
-                            onClick={() => handleReject(order.id)}
-                            disabled={actionLoading === order.id}
-                            className="inline-flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition font-medium disabled:opacity-50"
-                          >
-                            <X size={16} />
-                            Reject
-                          </button>
-                        </>
-                      )}
-                      {canShip && (
-                        <button
-                          onClick={() => setShippingModal(order)}
-                          className="inline-flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition font-medium"
-                        >
-                          <Truck size={16} />
-                          Add Shipping Info
-                        </button>
-                      )}
-                    </div>
-                  </div>
-                )}
-              </div>
-            );
-          })}
+          {filteredOrders.map((order) => (
+            <OrderRow
+              key={order.id}
+              order={order}
+              isExpanded={expandedOrder === order.id}
+              actionLoading={actionLoading}
+              onToggleExpand={(id) => setExpandedOrder(expandedOrder === id ? null : id)}
+              onAccept={handleAccept}
+              onReject={handleReject}
+              onShip={setShippingModal}
+              formatCurrency={formatCurrency}
+              formatDate={formatDate}
+            />
+          ))}
         </div>
+
+        {/* Pagination */}
+        {totalPages > 1 && (
+          <div className="flex items-center justify-between pt-4">
+            <p className="text-sm text-muted-foreground">
+              Showing {(currentPage - 1) * ITEMS_PER_PAGE + 1}–{Math.min(currentPage * ITEMS_PER_PAGE, allFilteredOrders.length)} of {allFilteredOrders.length}
+            </p>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                disabled={currentPage === 1}
+                className="p-2 rounded-lg border border-input hover:bg-muted disabled:opacity-50 transition"
+              >
+                <ChevronLeft size={16} />
+              </button>
+              <span className="text-sm font-medium px-2">Page {currentPage} of {totalPages}</span>
+              <button
+                onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                disabled={currentPage === totalPages}
+                className="p-2 rounded-lg border border-input hover:bg-muted disabled:opacity-50 transition"
+              >
+                <ChevronRight size={16} />
+              </button>
+            </div>
+          </div>
+        )}
+        </>
       )}
 
       {/* Shipping Modal */}
