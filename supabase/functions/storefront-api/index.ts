@@ -615,19 +615,7 @@ Deno.serve(async (req) => {
         });
       }
 
-      // Look up the seller's account_id (required NOT NULL on transactions)
-      const { data: sellerAccount } = await supabase
-        .from("accounts")
-        .select("id")
-        .eq("user_id", store.seller_id)
-        .maybeSingle();
-
-      if (!sellerAccount) {
-        return new Response(JSON.stringify({ success: false, error: "Seller account not found" }), {
-          status: 404,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
+      // No accounts lookup needed — transactions table uses seller_id directly
 
       // Get buyer user id if authenticated
       const buyerUserId = await getUserFromRequest(req);
