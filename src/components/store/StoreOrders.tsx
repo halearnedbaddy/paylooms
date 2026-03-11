@@ -515,6 +515,7 @@ const OrderRow = memo(function OrderRow({
           )}
         </div>
       ) : (
+        <>
         <div className="space-y-3">
           {filteredOrders.map((order) => (
             <OrderRow
@@ -557,6 +558,7 @@ const OrderRow = memo(function OrderRow({
             </div>
           </div>
         )}
+        </>
       )}
 
       {/* Shipping Modal */}
