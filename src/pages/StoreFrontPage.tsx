@@ -12,6 +12,7 @@ import { CartDrawer, BuyerDetails } from '@/components/store/CartDrawer';
 import { CartItem } from '@/hooks/useCart';
 
 const SUPABASE_URL = "https://krkybhborwvcbjzjcghw.supabase.co";
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imtya3liaGJvcnd2Y2JqempjZ2h3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE0OTYwNDksImV4cCI6MjA4NzA3MjA0OX0.mwm0aTd9ZBltJD5VgOFN7vZ6jibpKsF8dGdcSwOg1cw";
 
 interface StorefrontProduct {
   id: string;
@@ -60,17 +61,19 @@ export function StoreFrontPage() {
   const [sortBy, setSortBy] = useState<'newest' | 'price-low' | 'price-high' | 'popular'>('newest');
   const [cartOpen, setCartOpen] = useState(false);
 
-  const SUPABASE_URL_LOCAL = "https://krkybhborwvcbjzjcghw.supabase.co";
-
   const handlePlaceOrder = async (items: CartItem[], buyerDetails: BuyerDetails) => {
     if (!storeSlug) throw new Error('Store not found');
     // Create order for each item - sends to seller for confirmation
     for (const item of items) {
       const response = await fetch(
-        `${SUPABASE_URL_LOCAL}/functions/v1/storefront-api/checkout/${encodeURIComponent(storeSlug)}/${encodeURIComponent(item.id)}`,
+        `${SUPABASE_URL}/functions/v1/storefront-api/checkout/${encodeURIComponent(storeSlug)}/${encodeURIComponent(item.id)}`,
         {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: {
+            'Content-Type': 'application/json',
+            'apikey': SUPABASE_ANON_KEY,
+            'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+          },
           body: JSON.stringify({
             buyerName: buyerDetails.name,
             buyerPhone: buyerDetails.phone,
@@ -121,6 +124,8 @@ export function StoreFrontPage() {
         const response = await fetch(`${SUPABASE_URL}/functions/v1/storefront-api/store/${encodeURIComponent(storeSlug)}`, {
           headers: {
             'Content-Type': 'application/json',
+            'apikey': SUPABASE_ANON_KEY,
+            'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
           },
         });
         
