@@ -653,8 +653,7 @@ Deno.serve(async (req) => {
         .from("transactions")
         .insert({
           id: transactionId,
-          account_id: sellerAccount.id,   // required NOT NULL — seller's account
-          seller_id: store.seller_id,     // seller's user id for RLS queries
+          seller_id: store.seller_id,
           buyer_id: buyerUserId || null,
           product_id: productId,
           item_name: product.name,
