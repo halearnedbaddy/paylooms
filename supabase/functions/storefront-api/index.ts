@@ -668,7 +668,7 @@ Deno.serve(async (req) => {
           payment_method: paymentMethod || "PENDING_CONFIRMATION",
           platform_fee: platformFee,
           seller_payout: sellerPayout,
-          status: "PENDING",
+          status: "pending",
         })
         .select()
         .single();
