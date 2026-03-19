@@ -3,6 +3,7 @@ import { useParams, Link } from 'react-router-dom';
 import { useCurrency } from '@/hooks/useCurrency';
 import { useCart } from '@/hooks/useCart';
 import { useToast } from '@/hooks/use-toast';
+import { SUPABASE_URL, SUPABASE_ANON_KEY } from '@/lib/supabaseProject';
 import { 
   Search, ShoppingCart, Star, ChevronDown, Package, Shield, Clock, Heart, Share2,
   CheckCircle, AlertCircle, Store as StoreIcon, ArrowLeft
@@ -10,9 +11,6 @@ import {
 import { StorefrontChatWidget } from '@/components/chat/StorefrontChatWidget';
 import { CartDrawer, BuyerDetails } from '@/components/store/CartDrawer';
 import { CartItem } from '@/hooks/useCart';
-
-const SUPABASE_URL = "https://krkybhborwvcbjzjcghw.supabase.co";
-const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imtya3liaGJvcnd2Y2JqempjZ2h3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE0OTYwNDksImV4cCI6MjA4NzA3MjA0OX0.mwm0aTd9ZBltJD5VgOFN7vZ6jibpKsF8dGdcSwOg1cw";
 
 interface StorefrontProduct {
   id: string;
