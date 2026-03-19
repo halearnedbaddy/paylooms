@@ -678,6 +678,12 @@ Deno.serve(async (req) => {
         throw error;
       }
 
+      // Mark the product as unavailable after successful purchase
+      await supabase
+        .from("products")
+        .update({ is_available: false, updated_at: new Date().toISOString() })
+        .eq("id", productId);
+
       return new Response(JSON.stringify({
         success: true,
         data: {
