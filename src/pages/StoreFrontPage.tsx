@@ -11,8 +11,8 @@ import { StorefrontChatWidget } from '@/components/chat/StorefrontChatWidget';
 import { CartDrawer, BuyerDetails } from '@/components/store/CartDrawer';
 import { CartItem } from '@/hooks/useCart';
 
-const SUPABASE_URL = "https://krkybhborwvcbjzjcghw.supabase.co";
-const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imtya3liaGJvcnd2Y2JqempjZ2h3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE0OTYwNDksImV4cCI6MjA4NzA3MjA0OX0.mwm0aTd9ZBltJD5VgOFN7vZ6jibpKsF8dGdcSwOg1cw";
+const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || "https://pxyyncsnjpuwvnwyfdwx.supabase.co";
+const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY || "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InB4eXluY3NuanB1d3Zud3lmZHd4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjgwMDY5NDMsImV4cCI6MjA4MzU4Mjk0M30.n-tEs1U3qB7E_eov-zVL2g7crlhNOqJ5cF5TcUeV_dI";
 
 interface StorefrontProduct {
   id: string;
